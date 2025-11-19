@@ -108,13 +108,13 @@ func main() {
 		}
 	})
 
-	router.POST("/votos/", func(ctx *gin.Context) {
+	router.POST("/votos", func(ctx *gin.Context) {
 		if err := insertVoto(context, ctx, rdb); err != nil {
 			fmt.Println(err)
 		}
 	})
 
-	router.GET("/votos/", func(ctx *gin.Context) {
+	router.GET("/votos", func(ctx *gin.Context) {
 		WebSocketVotosHandler(ctx, rdb)
 	})
 
@@ -552,6 +552,20 @@ func WebSocketVotosHandler(c *gin.Context, redis *redis.Client) {
 		return
 	}
 	defer ws.Close()
+
+	votos, err := obterTotalDeVotos(c, redis)
+
+	if err != nil {
+		return
+	}
+
+	jsonVotos, err := json.Marshal(votos)
+
+	if err != nil {
+		return
+	}
+
+	ws.WriteMessage(websocket.TextMessage, []byte(jsonVotos))
 
 	pubsub := redis.Subscribe(c, "votacao_atualizada")
 	defer pubsub.Close()
