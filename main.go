@@ -47,6 +47,12 @@ func main() {
 		Protocol: 2,
 	})
 
+	createKeySpace := `CREATE KEYSPACE IF NOT EXISTS votacao WITH REPLICATION={'class':'SimpleStrategy', 'replication_factor': 1};`
+
+	if err := session.Query(createKeySpace).Exec(); err != nil {
+		panic(err)
+	}
+
 	createTableCanditato := `CREATE TABLE IF NOT EXISTS candidato(
 	id uuid,
 	nome text,
