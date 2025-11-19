@@ -1,0 +1,81 @@
+services:
+  db:
+    image: "cassandra:latest"  # cassandra:4.1.3
+    container_name: "cassandra-1"
+    ports:
+      - 7001:7000
+      - 9050:9042
+    networks:
+      - golang-app
+    environment:
+      - CASSANDRA_START_RPC=true       # default
+      - CASSANDRA_RPC_ADDRESS=0.0.0.0  # default
+      - CASSANDRA_LISTEN_ADDRESS=auto  # default, use IP addr of container # = CASSANDRA_BROADCAST_ADDRESS
+      - CASSANDRA_CLUSTER_NAME=my-cluster
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
+      - CASSANDRA_DC=my-datacenter-1
+    volumes:
+      - cassandra-node-1:/var/lib/cassandra:rw
+    restart:
+      on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status"]
+      interval: 2m
+      start_period: 2m
+      timeout: 10s
+      retries: 3
+
+  golang-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - golang-app
+    depends_on:
+      - db
+    volumes:
+      - .:/app            # <-- monta seu projeto no container
+      - /app/tmp  
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    command: ["redis-server", "--requirepass", "r478k"]
+    networks:
+      - golang-app
+    deploy:
+      resources: 
+        limits:
+          memory: 200MB
+          cpus: '0.5'
+
+  redisinsight:
+    depends_on:
+      - redis
+    image: redis/redisinsight:latest
+    container_name: redis-insight
+    ports:
+      - "5540:5540"
+    networks:
+      - golang-app
+    volumes:
+      - redisinsight:/data
+    
+
+
+volumes:
+  minio_data:
+  redis_data:
+  redisinsight:
+  cassandra-node-1:
+
+networks:
+  golang-app:
+    driver: bridge
